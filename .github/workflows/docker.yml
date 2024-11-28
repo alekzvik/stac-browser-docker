@@ -24,13 +24,17 @@ jobs:
             description: "stac-browser served on /"
             build-arg: 
             tag-suffix: 
-          - name: with /browser/ prefix
+          - name: prefix
             description: "stac-browser served on /browser/ pathPrefix"
             build-arg: pathPrefix=/browser/
             tag-suffix: "-prefix"
 
     runs-on: ubuntu-latest
     steps:
+      - name: Create build state directories
+        run: |
+          mkdir -p .github/build-state/${{ matrix.variant.name }}
+
       - name: Download previous build state
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -51,9 +55,12 @@ jobs:
         id: check-commits
         working-directory: stac-browser-repo
         run: |
-          # Read previous commit if exists
-          if [ -f "../.github/build-state/last-built-commit" ]; then
-            LAST_BUILT_COMMIT=$(cat ../.github/build-state/last-built-commit)
+          # Variant specific buil state path
+          BUILD_STATE_PATH="../.github/build-state/${{ matrix.variant.name }}"
+
+          # Read previous commit if exists 
+          if [ -f "$BUILD_STATE_PATH/last-built-commit" ]; then
+            LAST_BUILT_COMMIT=$(cat $BUILD_STATE_PATH/last-built-commit)
             
             # Check if there are new commits
             if git rev-list --count "$LAST_BUILT_COMMIT..HEAD" | grep -q '^0$'; then
@@ -67,37 +74,39 @@ jobs:
           
           # Store current HEAD commit
           mkdir -p ../.github/build-state
-          git rev-parse HEAD > ../.github/build-state/last-built-commit
+          git rev-parse HEAD > $BUILD_STATE_PATH/last-built-commit
 
-          echo "last_commit=`git rev-parse HEAD`" >> $GITHUB_OUTPUT
+          echo "last_commit=`cat $BUILD_STATE_PATH/last-built-commit`" >> $GITHUB_OUTPUT
 
-          cat ../.github/build-state/last-built-commit
+          cat $BUILD_STATE_PATH/last-built-commit
 
       - name: Check latest release
         id: check-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Variant specific buil state path
+          BUILD_STATE_PATH=".github/build-state/${{ matrix.variant.name }}"
           # Fetch latest release info
           LATEST_RELEASE=$(gh api repos/$STAC_BROWSER_REPO/releases/latest)
           LATEST_RELEASE_TAG=$(echo "$LATEST_RELEASE" | jq -r .tag_name)
           
           # Check if this is a new release
-          if [ -f ".github/build-state/last-built-release" ]; then
-            LAST_BUILT_RELEASE=$(cat .github/build-state/last-built-release)
+          if [ -f "$BUILD_STATE_PATH/last-built-release" ]; then
+            LAST_BUILT_RELEASE=$(cat $BUILD_STATE_PATH/last-built-release)
             if [ "$LATEST_RELEASE_TAG" != "$LAST_BUILT_RELEASE" ]; then
               echo "new_release=true" >> $GITHUB_OUTPUT
-              echo "$LATEST_RELEASE_TAG" > .github/build-state/last-built-release
+              echo "$LATEST_RELEASE_TAG" > $BUILD_STATE_PATH/last-built-release
             else
               echo "new_release=false" >> $GITHUB_OUTPUT
             fi
           else
             echo "new_release=true" >> $GITHUB_OUTPUT
-            echo "$LATEST_RELEASE_TAG" > .github/build-state/last-built-release
+            echo "$LATEST_RELEASE_TAG" > $BUILD_STATE_PATH/last-built-release
           fi
 
           echo "release_tag=$LATEST_RELEASE_TAG" > $GITHUB_OUTPUT
-          cat .github/build-state/last-built-release
+          cat $BUILD_STATE_PATH/last-built-release
 
       - name: Set up Docker Buildx
         if: steps.check-commits.outputs.new_commits == 'true' || steps.check-release.outputs.new_release == 'true'
@@ -179,6 +188,15 @@ jobs:
       - name: Upload build state
         uses: actions/upload-artifact@v4
         with:
-          name: build-state
-          path: .github/build-state
+          name: build-state-${{ matrix.variant.name }}
+          path: .github/build-state/${{ matrix.variant.name }}
           retention-days: 2
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "### Build Summary for ${{ matrix.variant.name }} variant" >> $GITHUB_STEP_SUMMARY
+          echo "* New Commits: ${{ steps.check-commits.outputs.new_commits }}" >> $GITHUB_STEP_SUMMARY
+          echo "* New Release: ${{ steps.check-release.outputs.new_release }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Last Commit: ${{ steps.check-commits.outputs.last_commit }}" >> $GITHUB_STEP_SUMMARY
+          echo "* Last Release: ${{ steps.check-release.outputs.release_tag }}" >> $GITHUB_STEP_SUMMARY
