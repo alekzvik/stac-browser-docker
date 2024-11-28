@@ -45,7 +45,7 @@ jobs:
           fi
           PACKAGE_NAME=stac-browser$SUFFIX
           NAMESPACED_PACKAGE_NAME=alekzvik/$PACKAGE_NAME
-          IMAGE_NAME=${{env.REGISTRY}}/$PACKAGE_NAME
+          IMAGE_NAME=${{env.REGISTRY}}/$NAMESPACED_PACKAGE_NAME
 
           echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
           echo "NAMESPACED_PACKAGE_NAME=$NAMESPACED_PACKAGE_NAME" >> $GITHUB_ENV
@@ -83,7 +83,7 @@ jobs:
 
       - name: Extract last built image
         run: |
-          skopeo inspect docker://${{ env.FLAVOURED_IMAGE_NAME }} | jq '.'
+          skopeo inspect docker://${{env.FLAVORED_IMAGE_NAME}} | jq '.'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -96,7 +96,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker meta - edge
-        if: ${{matrix.flavor}} == edge
+        if: ${{matrix.flavor}} == "edge"
         id: meta-edge
         uses: docker/metadata-action@v5
         with:
@@ -107,9 +107,13 @@ jobs:
             org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
             org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
+          labels: |
+            org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_commit}}
+            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
+            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
 
       - name: Docker meta - release
-        if: ${{matrix.flavor}} == release
+        if: ${{matrix.flavor}} == "release"
         id: meta-release
         uses: docker/metadata-action@v5
         with:
@@ -120,31 +124,35 @@ jobs:
             org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
             org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_tag_commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
+          labels: |
+            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
+            org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_tag_commit}}
+            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
 
       - name: Build and push image - edge
         id: push-edge
-        if: ${{matrix.flavor}} == edge
+        if: ${{matrix.flavor}} == "edge"
         uses: docker/build-push-action@v5
         with:
           context: stac-browser-repo
           push: true
           build-args: ${{ matrix.variant.build-arg }}
           tags: ${{steps.meta-edge.outputs.tags}}
-          labels: ${{steps.meta-edge.outputs.annotations}}
+          labels: ${{steps.meta-edge.outputs.labels}}
           annotations: ${{steps.meta-edge.outputs.annotations}}
           cache-from: type=gha
           cache-to: type=gha,mode=max  
 
       - name: Build and push image - release
         id: push-release
-        if: ${{matrix.flavor}} == release
+        if: ${{matrix.flavor}} == "release"
         uses: docker/build-push-action@v5
         with:
           context: stac-browser-repo
           push: true
           build-args: ${{ matrix.variant.build-arg }}
           tags: ${{steps.meta-release.outputs.tags}}
-          labels: ${{steps.meta-release.outputs.annotations}}
+          labels: ${{steps.meta-release.outputs.labels}}
           annotations: ${{steps.meta-release.outputs.annotations}}
           cache-from: type=gha
           cache-to: type=gha,mode=max  
