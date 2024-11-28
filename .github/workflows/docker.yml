@@ -32,9 +32,9 @@ jobs:
       FLAVORED_IMAGE_NAME: $REGISTRY/stac-browser${{matrix.variant.tag-suffix}}:${{matrix.flavor}}
     steps:
       - name: install skopeo
-        run: |
-          apt update
-          apt install -y skopeo
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: skopeo
 
       - name: Set env vars
         run: |
