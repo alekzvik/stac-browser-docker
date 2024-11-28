@@ -69,6 +69,8 @@ jobs:
           mkdir -p ../.github/build-state
           git rev-parse HEAD > ../.github/build-state/last-built-commit
 
+          echo "last_commit=`git rev-parse HEAD`" >> $GITHUB_OUTPUT
+
           cat ../.github/build-state/last-built-commit
 
       - name: Check latest release
@@ -119,6 +121,7 @@ jobs:
             type=edge
           labels: |
             org.opencontainers.image.description=${{matrix.variant.description}}
+            org.opencontainers.image.revision=${{steps.check-commits.outputs.last_commit}}
 
       - name: Docker meta - release
         id: meta-release
