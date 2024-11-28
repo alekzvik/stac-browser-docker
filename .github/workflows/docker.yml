@@ -39,8 +39,8 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: build-state
-          path: .github/build-state
+          name: build-state-${{ matrix.variant.name }}
+          path: .github/build-state/${{ matrix.variant.name }}
 
       - name: Checkout stac-browser repo
         uses: actions/checkout@v4
@@ -73,7 +73,6 @@ jobs:
           fi
           
           # Store current HEAD commit
-          mkdir -p ../.github/build-state
           git rev-parse HEAD > $BUILD_STATE_PATH/last-built-commit
 
           echo "last_commit=`cat $BUILD_STATE_PATH/last-built-commit`" >> $GITHUB_OUTPUT
