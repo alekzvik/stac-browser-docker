@@ -18,7 +18,7 @@ jobs:
             build-arg: 
             tag-suffix: 
           - name: with /browser/ prefix
-            description: "stac-browser served on /browser/ pathPrefix."
+            description: "stac-browser served on /browser/ pathPrefix"
             build-arg: pathPrefix=/browser/
             tag-suffix: "-prefix"
 
@@ -34,7 +34,7 @@ jobs:
       - name: Checkout stac-browser repo
         uses: actions/checkout@v4
         with:
-          repository: $STAC_BROWSER_REPO
+          repository: ${{env.STAC_BROWSER_REPO}}
           ref: main
           path: stac-browser-repo
           fetch-depth: 0
