@@ -1,0 +1,135 @@
+name: Docker Build and Publish Variants
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  STAC_BROWSER_REPO: radiantearth/stac-browser
+
+jobs:
+  check-and-build:
+    strategy:
+      matrix:
+        variant:
+          - name: default
+            description: "stac-browser served on /"
+            build-arg: 
+            tag-suffix: 
+          - name: with /browser/ prefix
+            description: "stac-browser served on /browser/ pathPrefix."
+            build-arg: pathPrefix=/browser/
+            tag-suffix: "-prefix"
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download previous build state
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: build-state
+          path: .github/build-state
+
+      - name: Checkout stac-browser repo
+        uses: actions/checkout@v4
+        with:
+          repository: $STAC_BROWSER_REPO
+          ref: main
+          path: stac-browser-repo
+          fetch-depth: 0
+
+      - name: Check for new commits
+        id: check-commits
+        working-directory: stac-browser-repo
+        run: |
+          # Read previous commit if exists
+          if [ -f "../.github/build-state/last-built-commit" ]; then
+            LAST_BUILT_COMMIT=$(cat ../.github/build-state/last-built-commit)
+            
+            # Check if there are new commits
+            if git rev-list --count "$LAST_BUILT_COMMIT..HEAD" | grep -q '^0$'; then
+              echo "new_commits=false" >> $GITHUB_OUTPUT
+            else
+              echo "new_commits=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "new_commits=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Store current HEAD commit
+          mkdir -p ../.github/build-state
+          git rev-parse HEAD > ../.github/build-state/last-built-commit
+
+          cat ../.github/build-state/last-built-commit
+
+      - name: Check latest release
+        id: check-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch latest release info
+          LATEST_RELEASE=$(gh api repos/$STAC_BROWSER_REPO/releases/latest)
+          LATEST_RELEASE_TAG=$(echo "$LATEST_RELEASE" | jq -r .tag_name)
+          
+          # Check if this is a new release
+          if [ -f ".github/build-state/last-built-release" ]; then
+            LAST_BUILT_RELEASE=$(cat .github/build-state/last-built-release)
+            if [ "$LATEST_RELEASE_TAG" != "$LAST_BUILT_RELEASE" ]; then
+              echo "new_release=true" >> $GITHUB_OUTPUT
+              echo "$LATEST_RELEASE_TAG" > .github/build-state/last-built-release
+            else
+              echo "new_release=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "new_release=true" >> $GITHUB_OUTPUT
+            echo "$LATEST_RELEASE_TAG" > .github/build-state/last-built-release
+          fi
+
+          cat .github/build-state/last-built-release
+
+
+      - name: Upload build state
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-state
+          path: .github/build-state
+          retention-days: 1
+
+      - name: Set up Docker Buildx
+        if: steps.check-commits.outputs.new_commits == 'true' || steps.check-release.outputs.new_release == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        if: steps.check-commits.outputs.new_commits == 'true' || steps.check-release.outputs.new_release == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push latest images
+        if: steps.check-commits.outputs.new_commits == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: stac-browser-repo
+          file: Dockerfile
+          push: true
+          build-args: ${{ matrix.variant.build-arg }}
+          tags: |
+            ghcr.io/${{ github.repository }}${{ matrix.variant.tag-suffix }}:latest
+          labels: |
+            org.opencontainers.image.description=${{ matrix.variant.description }}
+
+      - name: Build and push release images
+        if: steps.check-release.outputs.new_release == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: stac-browser-repo
+          file: Dockerfile
+          push: true
+          build-args: ${{ matrix.variant.build-arg }}
+          tags: |
+            ghcr.io/${{ github.repository }}${{ matrix.variant.tag-suffix }}:${{ steps.check-release.outputs.release_tag }}
+          labels: |
+            org.opencontainers.image.description=${{ matrix.variant.description }}
