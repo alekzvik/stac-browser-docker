@@ -14,6 +14,9 @@ jobs:
   build-and-push:
     permissions:
       packages: write
+      id-token: write
+      attestations: write
+      
     strategy:
       matrix:
         variant:
@@ -116,10 +119,6 @@ jobs:
             type=edge
           labels: |
             org.opencontainers.image.description=${{matrix.variant.description}}
-#            org.opencontainers.image.url=${{github.server_url}}/${{github.repository}}
-#            org.opencontainers.image.documentation=${{github.server_url}}/${{github.repository}}
-#            org.opencontainers.image.maintainer=${{github.repository_owner}}
-#            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
 
       - name: Docker meta - release
         id: meta-release
@@ -131,10 +130,6 @@ jobs:
             type=semver,pattern={{version}},value=${{steps.check-release.outputs.release_tag}}
           labels: |
             org.opencontainers.image.description=${{matrix.variant.description}}
-#            org.opencontainers.image.url=${{github.server_url}}/${{github.repository}}
-#            org.opencontainers.image.documentation=${{github.server_url}}/${{github.repository}}
-#            org.opencontainers.image.maintainer=${{github.repository_owner}}
-#            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
 
       - name: Build and push edge image
         id: push-edge
