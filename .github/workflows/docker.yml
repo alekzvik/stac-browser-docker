@@ -1,4 +1,4 @@
-name: Docker Build and Publish Variants
+name: Docker Build and Publish
 
 on:
   schedule:
@@ -17,10 +17,10 @@ jobs:
             description: "stac-browser served on /"
             build-arg: 
             tag-suffix: 
-          - name: with /browser/ prefix
-            description: "stac-browser served on /browser/ pathPrefix"
-            build-arg: pathPrefix=/browser/
-            tag-suffix: "-prefix"
+        #   - name: with /browser/ prefix
+        #     description: "stac-browser served on /browser/ pathPrefix"
+        #     build-arg: pathPrefix=/browser/
+        #     tag-suffix: "-prefix"
 
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +37,8 @@ jobs:
           repository: ${{env.STAC_BROWSER_REPO}}
           ref: main
           path: stac-browser-repo
-          fetch-depth: 0
+          fetch-depth: 1
+          fetch-tags: true
 
       - name: Check for new commits
         id: check-commits
@@ -113,7 +114,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: stac-browser-repo
-          file: Dockerfile
           push: true
           build-args: ${{ matrix.variant.build-arg }}
           tags: |
@@ -121,15 +121,14 @@ jobs:
           labels: |
             org.opencontainers.image.description=${{ matrix.variant.description }}
 
-      - name: Build and push release images
-        if: steps.check-release.outputs.new_release == 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: stac-browser-repo
-          file: Dockerfile
-          push: true
-          build-args: ${{ matrix.variant.build-arg }}
-          tags: |
-            ghcr.io/${{ github.repository }}${{ matrix.variant.tag-suffix }}:${{ steps.check-release.outputs.release_tag }}
-          labels: |
-            org.opencontainers.image.description=${{ matrix.variant.description }}
+    #   - name: Build and push release images
+    #     if: steps.check-release.outputs.new_release == 'true'
+    #     uses: docker/build-push-action@v5
+    #     with:
+    #       context: stac-browser-repo
+    #       push: true
+    #       build-args: ${{ matrix.variant.build-arg }}
+    #       tags: |
+    #         ghcr.io/${{ github.repository }}${{ matrix.variant.tag-suffix }}:${{ steps.check-release.outputs.release_tag }}
+    #       labels: |
+    #         org.opencontainers.image.description=${{ matrix.variant.description }}
