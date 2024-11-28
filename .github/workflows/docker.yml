@@ -113,6 +113,10 @@ jobs:
             type=edge
           labels: |
             org.opencontainers.image.description=${{matrix.variant.description}}
+            org.opencontainers.image.url=${{github.repositoryUrl}}
+            org.opencontainers.image.documentation=${{github.repositoryUrl}}
+            org.opencontainers.image.maintainer=${{github.repository_owner}}
+            org.opencontainers.image.source=https://github.com/$STAC_BROWSER_REPO
 
       - name: Docker meta
         id: meta-release
@@ -124,6 +128,10 @@ jobs:
             type=semver,pattern={{version}},value=${{steps.check-release.outputs.release_tag}}
           labels: |
             org.opencontainers.image.description=${{matrix.variant.description}}
+            org.opencontainers.image.url=${{github.repositoryUrl}}
+            org.opencontainers.image.documentation=${{github.repositoryUrl}}
+            org.opencontainers.image.maintainer=${{github.repository_owner}}
+            org.opencontainers.image.source=https://github.com/$STAC_BROWSER_REPO
 
       - name: Build and push edge image
         if: steps.check-commits.outputs.new_commits == 'true'
