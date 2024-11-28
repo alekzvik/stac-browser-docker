@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: alekzvik/stac-browser
+  IMAGE_NAME: ghcr.io/alekzvik/stac-browser
   STAC_BROWSER_REPO: radiantearth/stac-browser
 
 jobs:
