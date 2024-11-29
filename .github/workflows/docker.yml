@@ -1,4 +1,4 @@
-name: Build and Publish stac-browser image
+name: Publish stac-browser image
 
 on:
   schedule:
@@ -8,65 +8,29 @@ on:
 env:
   REGISTRY: ghcr.io
   STAC_BROWSER_REPO: radiantearth/stac-browser
+  IMAGE_NAME: ghcr.io/alekzvik/stac-browser-prefix
 
 jobs:
-  build-and-push:
-    permissions:
-      packages: write
-      
-    strategy:
-      matrix:
-        variant: 
-          - id: "default"
-          - id: "prefix"
-            build-arg: "pathPrefix=/browser/"
-        flavor: ["edge", "release"]
-        exclude:
-          - variant:
-              - id: "default"
-          - flavor: "release"
-
-
+  extract-meta:
     runs-on: ubuntu-latest
-    env:
-      FLAVORED_IMAGE_NAME: $REGISTRY/stac-browser${{matrix.variant.tag-suffix}}:${{matrix.flavor}}
+    outputs:
+      last_tag: ${{steps.pick.outputs.release_tag}}
+      last_commit: ${{steps.pick.outputs.release_commit}}
     steps:
       - name: install skopeo
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: skopeo
-
-      - name: Set env vars
         run: |
-          if [${{matrix.variant.id}} == "prefix"]; then
-            SUFFIX="-prefix"
-          else
-            SUFFIX=""
-          fi
-          PACKAGE_NAME=stac-browser$SUFFIX
-          NAMESPACED_PACKAGE_NAME=alekzvik/$PACKAGE_NAME
-          IMAGE_NAME=${{env.REGISTRY}}/$NAMESPACED_PACKAGE_NAME
-
-          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
-          echo "NAMESPACED_PACKAGE_NAME=$NAMESPACED_PACKAGE_NAME" >> $GITHUB_ENV
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "FLAVORED_IMAGE_NAME=$IMAGE_NAME:${{matrix.flavor}}" >> $GITHUB_ENV
-
-          echo "PACKAGE_NAME=$PACKAGE_NAME"
-          echo "IMAGE_NAME=$IMAGE_NAME"
-          echo "FLAVORED_IMAGE_NAME=$IMAGE_NAME:${{matrix.flavor}}"
+          sudo apt update
+          sudo apt install -y skopeo
 
       - name: Checkout stac-browser repo
         uses: actions/checkout@v4
         with:
           repository: ${{env.STAC_BROWSER_REPO}}
           ref: main
-          path: stac-browser-repo
           fetch-depth: 0
-
+      
       - name: Extract repo metadata
-        id: repo-metadata
-        working-directory: stac-browser-repo
+        id: repo-meta
         run: |
           LAST_COMMIT=$(git rev-parse HEAD)
 
@@ -80,79 +44,115 @@ jobs:
           echo "last_commit=$LAST_COMMIT"
           echo "last_tag=$LAST_TAG"
           echo "last_tag_commit=$LAST_TAG_COMMIT"
-
-      - name: Extract last built image
+      
+      - name: Extract package metadata
+        id: package-meta
+        continue-on-error: true
         run: |
-          skopeo inspect docker://${{env.FLAVORED_IMAGE_NAME}} | jq '.'
+          LATEST_TAG_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:latest | jq '.Labels."org.opencontainers.image.revision"')
+          LATEST_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:edge | jq '.Labels."org.opencontainers.image.revision"')
+          
+          echo "package_last_tag_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
+          echo "package_last_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Pick what to do
+        id: pick
+        run: |
+          if [[ "${{ steps.package-meta.outputs.package_last_commit }}" != "${{ steps.repo-meta.outputs.last_commit }}" ]]; then
+            echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+          if [[ "${{ steps.package-meta.outputs.package_last_tag_commit }}" != "${{ steps.repo-meta.outputs.last_tag_commit }}" ]]; then
+            echo "commit_tag=${{ steps.repo-meta.outputs.last_commit}}" >> $GITHUB_OUTPUT
+          fi
+      
+
+  push-release:
+    if: ${{needs.extract-meta.outputs.last_tag}}
+    needs: extract-meta
+    permissions:
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout stac-browser repo
+        id: checkout
+        uses: actions/checkout@v4
         with:
-          registry: ${{env.REGISTRY}}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{env.STAC_BROWSER_REPO}}
+          ref: ${{needs.extract-meta.outputs.last_tag}}
 
-      - name: Docker meta - edge
-        if: ${{matrix.flavor}} == "edge"
-        id: meta-edge
+      - name: Docker meta
+        id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{env.IMAGE_NAME}}
+          context: git
+          tags: |
+            type=semver,pattern={{version}},value=${{steps.checkout.outputs.ref}}
+          annotations: |
+            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
+            org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
+            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
+          labels: |
+            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
+            org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
+            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
+  
+      - name: Push image
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: pathPrefix=/browser/
+          tags: ${{steps.meta.outputs.tags}}
+          labels: ${{steps.meta.outputs.labels}}
+          annotations: ${{steps.meta.outputs.annotations}}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max  
+    
+  push-edge:
+    if: ${{needs.extract-meta.outputs.last_commit}}
+    needs: extract-meta
+    permissions:
+      packages: write
+      
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout stac-browser repo
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{env.STAC_BROWSER_REPO}}
+          ref: ${{needs.extract-meta.outputs.last_commit}}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{env.IMAGE_NAME}}
+          context: git
           tags: |
             type=edge
           annotations: |
-            org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_commit}}
+            org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
             org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
           labels: |
-            org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_commit}}
+            org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
             org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
 
-      - name: Docker meta - release
-        if: ${{matrix.flavor}} == "release"
-        id: meta-release
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{env.IMAGE_NAME}}
-          tags: |
-            type=semver,pattern={{version}},value=${{steps.repo-metadata.outputs.last_tag}}
-          annotations: |
-            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
-            org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_tag_commit}}
-            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
-          labels: |
-            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
-            org.opencontainers.image.revision=${{steps.repo-metadata.outputs.last_tag_commit}}
-            org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
-
-      - name: Build and push image - edge
-        id: push-edge
-        if: ${{matrix.flavor}} == "edge"
+      - name: Build and push image
+        id: push
         uses: docker/build-push-action@v5
         with:
-          context: stac-browser-repo
+          context: .
           push: true
           build-args: ${{ matrix.variant.build-arg }}
-          tags: ${{steps.meta-edge.outputs.tags}}
-          labels: ${{steps.meta-edge.outputs.labels}}
-          annotations: ${{steps.meta-edge.outputs.annotations}}
+          tags: ${{steps.meta.outputs.tags}}
+          labels: ${{steps.meta.outputs.labels}}
+          annotations: ${{steps.meta.outputs.annotations}}
           cache-from: type=gha
           cache-to: type=gha,mode=max  
 
-      - name: Build and push image - release
-        id: push-release
-        if: ${{matrix.flavor}} == "release"
-        uses: docker/build-push-action@v5
-        with:
-          context: stac-browser-repo
-          push: true
-          build-args: ${{ matrix.variant.build-arg }}
-          tags: ${{steps.meta-release.outputs.tags}}
-          labels: ${{steps.meta-release.outputs.labels}}
-          annotations: ${{steps.meta-release.outputs.annotations}}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max  
