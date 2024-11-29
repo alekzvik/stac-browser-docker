@@ -14,8 +14,8 @@ jobs:
   extract-meta:
     runs-on: ubuntu-latest
     outputs:
-      last_tag: ${{steps.pick.outputs.release_tag}}
-      last_commit: ${{steps.pick.outputs.release_commit}}
+      build_tag: ${{steps.pick.outputs.release_tag}}
+      build_commit: ${{steps.pick.outputs.release_commit}}
     steps:
       - name: install skopeo
         if: ${{ env.ACT }}
@@ -82,7 +82,7 @@ jobs:
           echo 'Last commit in `edge` release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
           if [ ${{ steps.pick.outputs.release_commit}} ]; then
-            echo 'Building `edge` release with the commit: ${{ steps.pick.outputs.commit_tag}}' >> $GITHUB_STEP_SUMMARY
+            echo 'Building `edge` release with the commit: ${{ steps.pick.outputs.release_commit}}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
           fi
@@ -99,7 +99,7 @@ jobs:
       
 
   push-release:
-    if: ${{ false || needs.extract-meta.outputs.last_tag}}
+    if: ${{ needs.extract-meta.outputs.build_tag }}
     needs: extract-meta
     permissions:
       packages: write
@@ -110,7 +110,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{env.STAC_BROWSER_REPO}}
-          ref: ${{needs.extract-meta.outputs.last_tag}}
+          ref: ${{needs.extract-meta.outputs.build_tag}}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -153,7 +153,7 @@ jobs:
           cache-to: type=gha,mode=max  
     
   push-edge:
-    if: ${{ false || needs.extract-meta.outputs.last_commit}}
+    if: ${{ needs.extract-meta.outputs.build_commit}}
     needs: extract-meta
     permissions:
       packages: write
@@ -165,7 +165,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{env.STAC_BROWSER_REPO}}
-          ref: ${{needs.extract-meta.outputs.last_commit}}
+          ref: ${{needs.extract-meta.outputs.build_commit}}
 
       - name: Docker meta
         id: meta
