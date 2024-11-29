@@ -58,6 +58,9 @@ jobs:
           echo "package_last_tag_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
           echo "package_last_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
 
+          echo "package_last_tag_commit=$LATEST_TAG_COMMIT"
+          echo "package_last_commit=$LATEST_TAG_COMMIT"
+
       - name: Pick what to do
         id: pick
         run: |
