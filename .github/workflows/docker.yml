@@ -74,8 +74,8 @@ jobs:
 
       - name: Prepare summary
         run: |
-          echo '### Planned work summary' >> $GITHUB_STEP_SUMMARY
-          echo '## Edge release (or main branch)' >> $GITHUB_STEP_SUMMARY
+          echo '## Planned work summary' >> $GITHUB_STEP_SUMMARY
+          echo '### Edge release (or main branch)' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in repo: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in edge release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
@@ -84,7 +84,7 @@ jobs:
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
           fi
-          echo '## Latest release (or last tag)' >> $GITHUB_STEP_SUMMARY
+          echo '### Latest release (or last tag)' >> $GITHUB_STEP_SUMMARY
           echo 'Last tag in repo: ${{ steps.repo-meta.outputs.last_tag }}' >> $GITHUB_STEP_SUMMARY
           echo 'with commit for this tag: ${{ steps.repo-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in latest release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
