@@ -61,11 +61,11 @@ jobs:
       - name: Pick what to do
         id: pick
         run: |
-          if [[ "${{ steps.package-meta.outputs.package_last_commit }}" != "${{ steps.repo-meta.outputs.last_commit }}" ]]; then
+          if [[ "${{ steps.package-meta.outputs.package_last_commit != steps.repo-meta.outputs.last_commit }}" ]]; then
             echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
           fi
 
-          if [[ "${{ steps.package-meta.outputs.package_last_tag_commit }}" != "${{ steps.repo-meta.outputs.last_tag_commit }}" ]]; then
+          if [[ "${{ steps.package-meta.outputs.package_last_tag_commit != steps.repo-meta.outputs.last_tag_commit }}" ]]; then
             echo "commit_tag=${{ steps.repo-meta.outputs.last_commit}}" >> $GITHUB_OUTPUT
           fi
       
