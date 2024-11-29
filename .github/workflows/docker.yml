@@ -29,6 +29,9 @@ jobs:
           ref: main
           fetch-depth: 0
       
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Extract repo metadata
         id: repo-meta
         run: |
@@ -80,6 +83,9 @@ jobs:
         with:
           repository: ${{env.STAC_BROWSER_REPO}}
           ref: ${{needs.extract-meta.outputs.last_tag}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Docker meta
         id: meta
