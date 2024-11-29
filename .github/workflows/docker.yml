@@ -18,6 +18,7 @@ jobs:
       last_commit: ${{steps.pick.outputs.release_commit}}
     steps:
       - name: install skopeo
+        if: ${{ env.ACT }}
         run: |
           sudo apt update
           sudo apt install -y skopeo
