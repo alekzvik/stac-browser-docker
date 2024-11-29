@@ -63,13 +63,15 @@ jobs:
         id: pick
         run: |
           # Check if repo and package have the same commit in edge
-          if [[ "${{ steps.package-meta.outputs.last_commit != steps.repo-meta.outputs.last_commit }}" ]]; then
-            echo "commit_tag=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
+          if [[ "${{steps.package-meta.outputs.last_commit}}" != "${{steps.repo-meta.outputs.last_commit}}" ]]; then
+            echo "release_commit=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
+            echo "release_commit=${{ steps.repo-meta.outputs.last_commit }}"
           fi
 
           # Check if repo and package have the same commit in latest
-          if [[ "${{ steps.package-meta.outputs.last_tag_commit != steps.repo-meta.outputs.last_tag_commit }}" ]]; then
+          if [[ "${{steps.package-meta.outputs.last_tag_commit}}" != "${{steps.repo-meta.outputs.last_tag_commit}}" ]]; then
             echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
+            echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}"
           fi
 
       - name: Prepare summary
@@ -77,27 +79,27 @@ jobs:
           echo '## Planned work summary' >> $GITHUB_STEP_SUMMARY
           echo '### Edge release (or main branch)' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in repo: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
-          echo 'Last commit in edge release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
+          echo 'Last commit in `edge` release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [${{ steps.pick.outputs.commit_tag}} ]; then
-            echo 'Building edge release with the commit: ${{ steps.pick.outputs.commit_tag}}' >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.pick.outputs.release_commit}} ]; then
+            echo 'Building `edge` release with the commit: ${{ steps.pick.outputs.commit_tag}}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
           fi
           echo '### Latest release (or last tag)' >> $GITHUB_STEP_SUMMARY
           echo 'Last tag in repo: ${{ steps.repo-meta.outputs.last_tag }}' >> $GITHUB_STEP_SUMMARY
           echo 'with commit for this tag: ${{ steps.repo-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
-          echo 'Last commit in latest release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
+          echo 'Last commit in `latest` release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [${{ steps.pick.outputs.release_tag}} ]; then
-            echo 'Building latest release with tag: ${{ steps.pick.outputs.release_tag}}' >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.pick.outputs.release_tag}} ]; then
+            echo 'Building `latest` release with tag: ${{ steps.pick.outputs.release_tag}}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build latest' >> $GITHUB_STEP_SUMMARY
           fi
       
 
   push-release:
-    if: ${{needs.extract-meta.outputs.last_tag}}
+    if: ${{ false || needs.extract-meta.outputs.last_tag}}
     needs: extract-meta
     permissions:
       packages: write
@@ -151,7 +153,7 @@ jobs:
           cache-to: type=gha,mode=max  
     
   push-edge:
-    if: ${{needs.extract-meta.outputs.last_commit}}
+    if: ${{ false || needs.extract-meta.outputs.last_commit}}
     needs: extract-meta
     permissions:
       packages: write
