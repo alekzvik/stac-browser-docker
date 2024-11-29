@@ -120,15 +120,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{env.IMAGE_NAME}}
-          context: git
           tags: |
             type=semver,pattern={{version}},value=${{steps.checkout.outputs.ref}}
           annotations: |
-            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
             org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
           labels: |
-            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
             org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
   
@@ -172,17 +169,14 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{env.IMAGE_NAME}}
-          context: git
           tags: |
             type=edge
           annotations: |
             org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
-            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
           labels: |
             org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
-            org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
 
       - name: Log in to the GitHub container registry
         uses: docker/login-action@v3
