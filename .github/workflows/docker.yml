@@ -14,8 +14,8 @@ jobs:
   extract-meta:
     runs-on: ubuntu-latest
     outputs:
-      build_tag: ${{steps.pick.outputs.release_tag}}
-      build_commit: ${{steps.pick.outputs.release_commit}}
+      build_tag: ${{steps.pick.outputs.build_tag}}
+      build_commit: ${{steps.pick.outputs.build_commit}}
     steps:
       - name: install skopeo
         if: ${{ env.ACT }}
@@ -50,28 +50,28 @@ jobs:
         id: package-meta
         continue-on-error: true
         run: |
-          LATEST_TAG_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:latest | jq '.Labels."org.opencontainers.image.revision"' -r)
-          LATEST_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:edge | jq '.Labels."org.opencontainers.image.revision"' -r)
+          LATEST_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:latest | jq '.Labels."org.opencontainers.image.revision"' -r)
+          EDGE_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:edge | jq '.Labels."org.opencontainers.image.revision"' -r)
           
-          echo "last_tag_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
-          echo "last_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
+          echo "last_tag_commit=$LATEST_COMMIT" >> $GITHUB_OUTPUT
+          echo "last_commit=$EDGE_COMMIT" >> $GITHUB_OUTPUT
 
-          echo "last_tag_commit=$LATEST_TAG_COMMIT"
-          echo "last_commit=$LATEST_TAG_COMMIT"
+          echo "last_tag_commit=$LATEST_COMMIT"
+          echo "last_commit=$EDGE_COMMIT"
 
       - name: Pick what to do
         id: pick
         run: |
           # Check if repo and package have the same commit in edge
           if [[ "${{steps.package-meta.outputs.last_commit}}" != "${{steps.repo-meta.outputs.last_commit}}" ]]; then
-            echo "release_commit=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
-            echo "release_commit=${{ steps.repo-meta.outputs.last_commit }}"
+            echo "build_commit=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
+            echo "build_commit=${{ steps.repo-meta.outputs.last_commit }}"
           fi
 
           # Check if repo and package have the same commit in latest
           if [[ "${{steps.package-meta.outputs.last_tag_commit}}" != "${{steps.repo-meta.outputs.last_tag_commit}}" ]]; then
-            echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
-            echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}"
+            echo "build_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
+            echo "build_tag=${{ steps.repo-meta.outputs.last_tag }}"
           fi
 
       - name: Prepare summary
