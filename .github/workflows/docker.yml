@@ -164,6 +164,9 @@ jobs:
           repository: ${{env.STAC_BROWSER_REPO}}
           ref: ${{needs.extract-meta.outputs.build_commit}}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+  
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
