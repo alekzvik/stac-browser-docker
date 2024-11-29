@@ -53,22 +53,22 @@ jobs:
           LATEST_TAG_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:latest | jq '.Labels."org.opencontainers.image.revision"' -r)
           LATEST_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:edge | jq '.Labels."org.opencontainers.image.revision"' -r)
           
-          echo "package_last_tag_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
-          echo "package_last_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
+          echo "last_tag_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
+          echo "last_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
 
-          echo "package_last_tag_commit=$LATEST_TAG_COMMIT"
-          echo "package_last_commit=$LATEST_TAG_COMMIT"
+          echo "last_tag_commit=$LATEST_TAG_COMMIT"
+          echo "last_commit=$LATEST_TAG_COMMIT"
 
       - name: Pick what to do
         id: pick
         run: |
           # Check if repo and package have the same commit in edge
-          if [[ "${{ steps.package-meta.outputs.package_last_commit != steps.repo-meta.outputs.last_commit }}" ]]; then
+          if [[ "${{ steps.package-meta.outputs.last_commit != steps.repo-meta.outputs.last_commit }}" ]]; then
             echo "commit_tag=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
           fi
 
           # Check if repo and package have the same commit in latest
-          if [[ "${{ steps.package-meta.outputs.package_last_tag_commit != steps.repo-meta.outputs.last_tag_commit }}" ]]; then
+          if [[ "${{ steps.package-meta.outputs.last_tag_commit != steps.repo-meta.outputs.last_tag_commit }}" ]]; then
             echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
           fi
 
