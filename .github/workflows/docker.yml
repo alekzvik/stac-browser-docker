@@ -104,6 +104,13 @@ jobs:
             org.opencontainers.image.revision=${{steps.checkout.outputs.commit}}
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
   
+      - name: Log in to the GitHub container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner  }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+    
       - name: Push image
         id: push
         uses: docker/build-push-action@v5
@@ -149,6 +156,13 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{env.STAC_BROWSER_REPO}}
             org.opencontainers.image.title=${{ env.PACKAGE_NAME }}
 
+      - name: Log in to the GitHub container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner  }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+              
       - name: Build and push image
         id: push
         uses: docker/build-push-action@v5
