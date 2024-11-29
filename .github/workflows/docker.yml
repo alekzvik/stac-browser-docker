@@ -64,12 +64,14 @@ jobs:
       - name: Pick what to do
         id: pick
         run: |
+          # Check if repo and package have the same commit in edge
           if [[ "${{ steps.package-meta.outputs.package_last_commit != steps.repo-meta.outputs.last_commit }}" ]]; then
-            echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
+            echo "commit_tag=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
           fi
 
+          # Check if repo and package have the same commit in latest
           if [[ "${{ steps.package-meta.outputs.package_last_tag_commit != steps.repo-meta.outputs.last_tag_commit }}" ]]; then
-            echo "commit_tag=${{ steps.repo-meta.outputs.last_commit}}" >> $GITHUB_OUTPUT
+            echo "release_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
           fi
       
 
