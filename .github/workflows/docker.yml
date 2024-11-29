@@ -29,9 +29,6 @@ jobs:
           ref: main
           fetch-depth: 0
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Extract repo metadata
         id: repo-meta
         run: |
@@ -52,8 +49,8 @@ jobs:
         id: package-meta
         continue-on-error: true
         run: |
-          LATEST_TAG_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:latest | jq '.Labels."org.opencontainers.image.revision"')
-          LATEST_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:edge | jq '.Labels."org.opencontainers.image.revision"')
+          LATEST_TAG_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:latest | jq '.Labels."org.opencontainers.image.revision"' -r)
+          LATEST_COMMIT=$(skopeo inspect docker://${{ env.IMAGE_NAME }}:edge | jq '.Labels."org.opencontainers.image.revision"' -r)
           
           echo "package_last_tag_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
           echo "package_last_commit=$LATEST_TAG_COMMIT" >> $GITHUB_OUTPUT
