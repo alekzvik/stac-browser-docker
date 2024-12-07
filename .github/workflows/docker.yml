@@ -93,7 +93,7 @@ jobs:
           echo 'Last commit in repo: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `edge` release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.need_edge}} ]; then
+          if [ ${{ steps.pick.outputs.need_edge == true}} ]; then
             echo 'Building `edge` release with the commit: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
@@ -103,7 +103,7 @@ jobs:
           echo 'with commit for this tag: ${{ steps.repo-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `latest` release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.need_release}} ]; then
+          if [ ${{ steps.pick.outputs.need_release == true}} ]; then
             echo 'Building `latest` release with tag: ${{ steps.repo-meta.outputs.last_tag }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build latest' >> $GITHUB_STEP_SUMMARY
