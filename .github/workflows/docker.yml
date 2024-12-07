@@ -20,8 +20,10 @@ jobs:
   extract-meta:
     runs-on: ubuntu-latest
     outputs:
-      build_tag: ${{steps.pick.outputs.build_tag}}
-      build_commit: ${{steps.pick.outputs.build_commit}}
+      build_tag: ${{steps.repo-meta.outputs.last_tag}}
+      build_commit: ${{steps.repo-meta.outputs.last_commit}}
+      need_edge: ${{steps.pick.outputs.need_edge}}
+      need_release: ${{steps.pick.outputs.need_release}}
     steps:
       - name: install skopeo
         if: ${{ env.ACT }}
@@ -69,16 +71,20 @@ jobs:
         id: pick
         run: |
           # Check if repo and package have the same commit in edge
+          NEED_EDGE=false
           if [[ "${{steps.package-meta.outputs.last_commit}}" != "${{steps.repo-meta.outputs.last_commit}}" ]]; then
-            echo "build_commit=${{ steps.repo-meta.outputs.last_commit }}" >> $GITHUB_OUTPUT
-            echo "build_commit=${{ steps.repo-meta.outputs.last_commit }}"
+            NEED_EDGE=true
           fi
+          echo "need_edge=$NEED_EDGE" >> $GITHUB_OUTPUT
+          echo "need_edge=$NEED_EDGE"
 
           # Check if repo and package have the same commit in latest
+          NEED_RELEASE=false
           if [[ "${{steps.package-meta.outputs.last_tag_commit}}" != "${{steps.repo-meta.outputs.last_tag_commit}}" ]]; then
-            echo "build_tag=${{ steps.repo-meta.outputs.last_tag }}" >> $GITHUB_OUTPUT
-            echo "build_tag=${{ steps.repo-meta.outputs.last_tag }}"
+            NEED_RELEASE=true
           fi
+          echo "need_release=$NEED_RELEASE" >> $GITHUB_OUTPUT
+          echo "need_release=$NEED_RELEASE"
 
       - name: Prepare summary
         run: |
@@ -87,8 +93,8 @@ jobs:
           echo 'Last commit in repo: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `edge` release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.release_commit}} ]; then
-            echo 'Building `edge` release with the commit: ${{ steps.pick.outputs.release_commit}}' >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.pick.outputs.need_edge}} ]; then
+            echo 'Building `edge` release with the commit: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
           fi
@@ -97,15 +103,15 @@ jobs:
           echo 'with commit for this tag: ${{ steps.repo-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `latest` release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.release_tag}} ]; then
-            echo 'Building `latest` release with tag: ${{ steps.pick.outputs.release_tag}}' >> $GITHUB_STEP_SUMMARY
+          if [ ${{ steps.pick.outputs.need_release}} ]; then
+            echo 'Building `latest` release with tag: ${{ steps.repo-meta.outputs.last_tag }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build latest' >> $GITHUB_STEP_SUMMARY
           fi
       
 
   push-release:
-    if: ${{ needs.extract-meta.outputs.build_tag || github.event.inputs.force }}
+    if: ${{ needs.extract-meta.outputs.need_release || github.event.inputs.force }}
     needs: extract-meta
     permissions:
       packages: write
@@ -156,7 +162,7 @@ jobs:
           cache-to: type=gha,mode=max  
     
   push-edge:
-    if: ${{ needs.extract-meta.outputs.build_commit || github.event.inputs.force}}
+    if: ${{ needs.extract-meta.outputs.need_edge || github.event.inputs.force}}
     needs: extract-meta
     permissions:
       packages: write
