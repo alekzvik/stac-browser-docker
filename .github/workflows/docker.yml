@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 0 * * *'  # Run daily at midnight
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      force: 
+        description: Force to rebuild all images
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -100,7 +105,7 @@ jobs:
       
 
   push-release:
-    if: ${{ needs.extract-meta.outputs.build_tag }}
+    if: ${{ needs.extract-meta.outputs.build_tag || github.event.inputs.force }}
     needs: extract-meta
     permissions:
       packages: write
@@ -151,7 +156,7 @@ jobs:
           cache-to: type=gha,mode=max  
     
   push-edge:
-    if: ${{ needs.extract-meta.outputs.build_commit}}
+    if: ${{ needs.extract-meta.outputs.build_commit || github.event.inputs.force}}
     needs: extract-meta
     permissions:
       packages: write
