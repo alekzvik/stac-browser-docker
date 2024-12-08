@@ -113,7 +113,7 @@ jobs:
       
 
   push-release:
-    if: needs.extract-meta.outputs.need_release == 'true' || github.event.inputs.force
+    if: (needs.extract-meta.outputs.need_release == 'true') || inputs.force
     needs: extract-meta
     permissions:
       packages: write
@@ -164,7 +164,7 @@ jobs:
           cache-to: type=gha,mode=max  
     
   push-edge:
-    if: needs.extract-meta.outputs.need_edge == 'true' || github.event.inputs.force
+    if: (needs.extract-meta.outputs.need_edge == 'true') || inputs.force
     needs: extract-meta
     permissions:
       packages: write
