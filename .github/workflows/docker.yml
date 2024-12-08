@@ -95,7 +95,7 @@ jobs:
           echo 'Last commit in repo: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `edge` release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.need_edge == 'true'}} ]; then
+          if [ "${{ steps.pick.outputs.need_edge}}" == "true" ]; then
             echo 'Building `edge` release with the commit: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
@@ -105,7 +105,7 @@ jobs:
           echo 'with commit for this tag: ${{ steps.repo-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `latest` release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.need_release == 'true'}} ]; then
+          if [ "${{ steps.pick.outputs.need_release}}" == "true" ]; then
             echo 'Building `latest` release with tag: ${{ steps.repo-meta.outputs.last_tag }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build latest' >> $GITHUB_STEP_SUMMARY
@@ -113,7 +113,7 @@ jobs:
       
 
   push-release:
-    if: ${{ needs.extract-meta.outputs.need_release == 'true' || github.event.inputs.force }}
+    if: ${{ fromJson(needs.extract-meta.outputs.need_release) || github.event.inputs.force }}
     needs: extract-meta
     permissions:
       packages: write
@@ -164,7 +164,7 @@ jobs:
           cache-to: type=gha,mode=max  
     
   push-edge:
-    if: ${{ needs.extract-meta.outputs.need_edge == 'true' || github.event.inputs.force}}
+    if: ${{ fromJson(needs.extract-meta.outputs.need_edge) || github.event.inputs.force}}
     needs: extract-meta
     permissions:
       packages: write
