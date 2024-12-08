@@ -71,17 +71,17 @@ jobs:
         id: pick
         run: |
           # Check if repo and package have the same commit in edge
-          NEED_EDGE=false
+          NEED_EDGE=0
           if [[ "${{steps.package-meta.outputs.last_commit}}" != "${{steps.repo-meta.outputs.last_commit}}" ]]; then
-            NEED_EDGE=true
+            NEED_EDGE=1
           fi
           echo "need_edge=$NEED_EDGE" >> $GITHUB_OUTPUT
           echo "need_edge=$NEED_EDGE"
 
           # Check if repo and package have the same commit in latest
-          NEED_RELEASE=false
+          NEED_RELEASE=0
           if [[ "${{steps.package-meta.outputs.last_tag_commit}}" != "${{steps.repo-meta.outputs.last_tag_commit}}" ]]; then
-            NEED_RELEASE=true
+            NEED_RELEASE=1
           fi
           echo "need_release=$NEED_RELEASE" >> $GITHUB_OUTPUT
           echo "need_release=$NEED_RELEASE"
@@ -93,7 +93,7 @@ jobs:
           echo 'Last commit in repo: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `edge` release: ${{ steps.package-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.need_edge == true}} ]; then
+          if [ ${{ steps.pick.outputs.need_edge == 1}} ]; then
             echo 'Building `edge` release with the commit: ${{ steps.repo-meta.outputs.last_commit }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build edge' >> $GITHUB_STEP_SUMMARY
@@ -103,7 +103,7 @@ jobs:
           echo 'with commit for this tag: ${{ steps.repo-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Last commit in `latest` release: ${{ steps.package-meta.outputs.last_tag_commit }}' >> $GITHUB_STEP_SUMMARY
           echo 'Outcome:' >> $GITHUB_STEP_SUMMARY
-          if [ ${{ steps.pick.outputs.need_release == true}} ]; then
+          if [ ${{ steps.pick.outputs.need_release == 1}} ]; then
             echo 'Building `latest` release with tag: ${{ steps.repo-meta.outputs.last_tag }}' >> $GITHUB_STEP_SUMMARY
           else
             echo 'Commits are the same, no need to build latest' >> $GITHUB_STEP_SUMMARY
